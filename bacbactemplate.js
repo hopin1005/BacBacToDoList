@@ -28,47 +28,6 @@ var bacbactemplate = {
         "text": "BAC BAC To Do List",
         "size": "xl",
         "weight": "bold"
-      },
-      {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "sm",
-        "contents": [
-          {
-            "type": "box",
-            "layout": "baseline",
-            "contents": [
-              {
-                "type": "icon",
-                "url": "https://image.flaticon.com/icons/png/512/197/197335.png"
-              },
-              {
-                "type": "text",
-                "text": "吃飯",
-                "weight": "bold",
-                "margin": "sm",
-                "flex": 0
-              }
-            ]
-          },
-          {
-            "type": "box",
-            "layout": "baseline",
-            "contents": [
-              {
-                "type": "icon",
-                "url": "https://image.flaticon.com/icons/png/512/197/197335.png"
-              },
-              {
-                "type": "text",
-                "text": "睡覺",
-                "weight": "bold",
-                "margin": "sm",
-                "flex": 0
-              }
-            ]
-          }
-        ]
       }
     ]
   },
@@ -82,9 +41,9 @@ var bacbactemplate = {
         "color": "#905c44",
         "action": {
           "type": "postback",
-          "label": "新增",
-          "data": "add",
-          "displayText": "新增"
+          "label": "刪除",
+          "data": "del",
+          "displayText": "刪除"
         }
       },
       {
@@ -93,9 +52,9 @@ var bacbactemplate = {
         "color": "#905c44",
         "action": {
           "type": "postback",
-          "label": "修改",
-          "data": "add",
-          "displayText": "新增"
+          "label": "顯示",
+          "data": "show",
+          "displayText": "顯示"
         },
         "offsetTop": "5px"
       }
