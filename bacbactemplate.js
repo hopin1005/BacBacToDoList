@@ -1,7 +1,7 @@
 var bacbactemplate = {
   "type": "flex",
   "altText": "BACBACToDoList",
-  "contents":{
+  "contents" : {
   "type": "bubble",
   "hero": {
     "type": "image",
@@ -28,6 +28,14 @@ var bacbactemplate = {
         "text": "BAC BAC To Do List",
         "size": "xl",
         "weight": "bold"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          
+        ]
       }
     ]
   },
@@ -61,5 +69,6 @@ var bacbactemplate = {
     ]
   }
 }
+
 }
 exports.bacbactemplate = bacbactemplate;
