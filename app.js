@@ -61,7 +61,6 @@ bot.on('follow', function(event){
 	var deltmp_template = JSON.stringify(del_template);
 	var count = 0;
 
-	/*sql_query = "insert into linebot (id, template, deltemplate, count) select * from (select " + "'" + userid + "',"  + "'" + tmp_template + "'," + "'" + deltmp_template  +"'," + "'" + count + "'"  +  ") as tmp where not exists(select id from linebot where id = "+ "'" + userid + "'"  + ");";*/
 	
 	sql_query = `insert into linebot (id, template, deltemplate, count) select * from (select'${userid}', '${tmp_template}', '${deltmp_template}', ${count}) as tmp where not exists (select id from linebot where id = '${userid}');`;
 
@@ -157,31 +156,74 @@ bot.on('postback', function(event){
 				event.reply(res);
 
 			});
-
+		
 			
 			break;
 
 
 		case /^action=del/.test(data):
 			
-			//del user data;
-			//slice delete item
-			;
+			//split item value
+			var remove_thing = data.split("=")[2];
 			
-
+			
 			//delete item from database;
 			//get deltemplate from database
-			sql_query = mysql.format("select deltemplate from linebot where id = ?;", [userid]);
+			sql_query = mysql.format("select template,deltemplate,count from linebot where id = ?;", [userid]);
 
 			query(sql_query, function(err, results){
                         	if (err) {
                                 	console.log("Encountered an error:", err.message);
                         	}
 
-				var res = JSON.parse(results[0].deltemplate);
-
-				//find item and delete
+				var res = JSON.parse(results[0].template);
+				var delres = JSON.parse(results[0].deltemplate);
+				var tmp_count = results[0].count;	
 				
+				//let's recorded list become one array
+				record_list = [];
+				var mainstruct = res.contents.body.contents[1].contents;
+				mainstruct.forEach(function(value, index){
+					
+					record_list.push(value.contents[1].text);
+					
+				});
+				
+
+				//remove certain item using index;
+				var index = record_list.indexOf(remove_thing);
+				res = bacbactemplate;
+				
+				if (index !== -1) {
+ 					 record_list.splice(index, 1);
+				}else{
+					event.reply("沒有找到你想刪除的!");
+				}
+					
+				//push to new usertemplate
+				
+				if(record_list.length == 0){
+
+					res = bacbactemplate;
+					event.reply(["哇，你完成所有事情了!",res]);
+
+				}else{
+					tmp_count -= 1;
+					record_list.forEach(function(value){
+						
+						//user_template
+                                        	action_template.contents[1].text = value;
+                                        	res.contents.body.contents[1].contents.push(action_template);
+                          	
+					})
+
+				}
+				event.reply(res);
+				
+				//push to new deltemplate
+				
+				//update db data;
+				update(res, delres, userid, tmp_count);
 
                 	});
 
@@ -253,31 +295,28 @@ bot.on('message', function(event){
 		
 		
 
-		event.reply(["你現在的ToDoList：" , res,delres]);
+		event.reply(["你現在的ToDoList：" , res]);
 		
 		//update database 
 		update(res, delres, userid, tmp_count);
         });
 	
-	//update database
-	function update(data, delres, userid, tmp_count){
-		
-		var temp_template = JSON.stringify(data);
-		var deltemp_template = JSON.stringify(delres);
-
-		
-		var sql_query = `update linebot set template = '${temp_template}', deltemplate = '${deltemp_template}', count = '${tmp_count}' where id = '${userid}';`;
-
-		query(sql_query, function(err, results){
-                	if (err) {
-                        	console.log("Encountered an error:", err.message);
-                	}
-			
-		});
-
-	}
 
 })
 
 
-//id -> index -> del;
+function update(data, delres, userid, tmp_count){
+
+	var temp_template = JSON.stringify(data);
+        var deltemp_template = JSON.stringify(delres);
+
+
+        var sql_query = `update linebot set template = '${temp_template}', deltemplate = '${deltemp_template}', count = '${tmp_count}' where id = '${userid}';`;
+
+        query(sql_query, function(err, results){
+        	if (err) {
+                	console.log("Encountered an error:", err.message);
+                }
+
+	});
+}

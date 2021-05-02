@@ -41,8 +41,8 @@ var pushtemplate = {
   "action": {
   	"type": "postback",
   	"label": "del",
-  	"data": "action=del&itemid=",
-  	"displayText": "delete to do list"
+  	"data": "action=del&itemid="
+  	//"displayText": ""
   },
   "style": "primary",
   "color": "#905c44"
