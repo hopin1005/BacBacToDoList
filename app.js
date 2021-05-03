@@ -99,8 +99,8 @@ bot.on("unfollow", function(event){
 //postback function when user click template button
 //1. teach how to add list & create user data in db
 //2. show list
-//3. teach how to del
-//4. delete list
+//3. popout deltemplate
+//4. delete main function
 bot.on('postback', function(event){
 	var data = event.postback.data
 	var userid = event.source.userId;
@@ -192,8 +192,13 @@ bot.on('postback', function(event){
 
 				//remove certain item using index;
 				var index = record_list.indexOf(remove_thing);
-				res = bacbactemplate;
 				
+				res = JSON.stringify(bacbactemplate);
+				res = JSON.parse(res);
+				
+				delres = JSON.stringify(del_template);
+				delres = JSON.parse(delres);
+
 				if (index !== -1) {
  					 record_list.splice(index, 1);
 				}else{
@@ -203,25 +208,60 @@ bot.on('postback', function(event){
 				//push to new usertemplate
 				
 				if(record_list.length == 0){
-
-					res = bacbactemplate;
+					
+					//empty user templare
+					res = JSON.stringify(bacbactemplate);
+					res = JSON.parse(res);
+					
+					//empty del template
+					delres = JSON.stringify(del_template);
+					delres = JSON.parse(delres);
+					
 					event.reply(["哇，你完成所有事情了!",res]);
+					
 
 				}else{
-					tmp_count -= 1;
-					record_list.forEach(function(value){
+					tmp_count = 0;
+					console.log(record_list)
+					record_list.forEach(function(value,i){
+						
+						
+						//caclute how many things be recorded
+						tmp_count += 1;
 						
 						//user_template
                                         	action_template.contents[1].text = value;
+						
+						//magic bug?????????????????????????????????????
                                         	res.contents.body.contents[1].contents.push(action_template);
-                          	
+						console.log(res.contents.body.contents[1].contents[i]);
+
+						//del_template
+
+						/*var outter_index = parseInt(tmp_count / 3);
+						
+						push_template.action.data = `action=del&itemid=${value}`;
+						push_template.action.label = value;
+						
+						if(tmp_count % 3 == 1 && tmp_count > 3){
+							
+							//push outter template
+							delres.contents.contents.push(newcarousel);
+
+						}
+						if(tmp_count % 3 == 0){
+							outter_index -= 1;
+						}
+                          			
+						//push single inner template
+						delres.contents.contents[outter_index].body.contents.push(push_template);*/
+
 					})
 
 				}
+				console.log(res.contents.body.contents[1].contents[1])
 				event.reply(res);
-				
-				//push to new deltemplate
-				
+
 				//update db data;
 				update(res, delres, userid, tmp_count);
 
@@ -245,8 +285,11 @@ bot.on('message', function(event){
 	//add user any  input to template
 	var input = event.message.text;
 	var userid = event.source.userId;	
+
 	//input data to action_template and del_template
 	action_template.contents[1].text = input;
+
+	//input data to del template
 	push_template.action.data = `action=del&itemid=${input}`;
 	push_template.action.label = input;
 
