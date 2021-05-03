@@ -51,7 +51,6 @@ var bacbactemplate = {
           "type": "postback",
           "label": "刪除",
           "data": "del",
-          "displayText": "刪除"
         }
       },
       {
@@ -62,7 +61,6 @@ var bacbactemplate = {
           "type": "postback",
           "label": "顯示",
           "data": "show",
-          "displayText": "顯示"
         },
         "offsetTop": "5px"
       }
