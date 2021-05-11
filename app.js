@@ -52,17 +52,13 @@ app.listen(3000);
 //when user follow
 bot.on('follow', function(event){
 	
-	//create user data -> create user_template and deltemplate
-	//insert data if user not exist 
-	//maybe sql injection??
-	var userid = event.source.userId;
-	var tmp_template = JSON.stringify(bacbactemplate);
-	
-	var deltmp_template = JSON.stringify(del_template);
+
+	var userId = event.source.userId;
+
+	//input empty things and count to database
 	var count = 0;
 
-	
-	sql_query = `insert into linebot (id, template, deltemplate, count) select * from (select'${userid}', '${tmp_template}', '${deltmp_template}', ${count}) as tmp where not exists (select id from linebot where id = '${userid}');`;
+	sql_query = `insert into user_info (userid) values ('${userId}');`;
 
 	query(sql_query, function(err, results){
 
@@ -70,10 +66,17 @@ bot.on('follow', function(event){
                 	console.log('Encountered an error:', err.message);
         	}
 
-		
-  		event.reply(["歡迎來到BacBacToDoList! 按下方按鈕開始吧! 還能上傳圖片置換上面!","如果程式怪怪的，先封鎖在追蹤就可以清除todolist囉!",empty_template]);
 	});
 
+	sql_query = `insert into user_data (dataid, thingstodo, count) values ('${userId}', '', '${count}');`;
+	query(sql_query, function(err, results){
+
+		if(err){
+			console.log('Encountered an error:' ,err.message);
+		}
+	
+  		event.reply(["歡迎來到BacBacToDoList! 按下方按鈕開始吧! 還能上傳圖片置換上面!","如果程式怪怪的，先封鎖在追蹤就可以清除todolist囉!",empty_template]);
+	});
 
 
 });
@@ -83,15 +86,21 @@ bot.on('follow', function(event){
 //delete user data
 bot.on("unfollow", function(event){
 	
-	var sql_query = `delete from linebot where id = "${event.source.userId}";`;
+	sql_query = `delete from user_data where dataid = '${event.source.userId}';`;
+
+	query(sql_query, function(err, results){
+		if(err) {
+			console.log('Encountered an error:', err.message);
+		}
+	});
+
+
+	sql_query = `delete from user_info where userid = "${event.source.userId}";`;
 	query(sql_query, function(err, results){
                 if (err) {
                         console.log('Encountered an error:', err.message);
                 }
-		
-
         });	
-
 
 })
 
@@ -107,38 +116,22 @@ bot.on('postback', function(event){
 
 	switch (true){
 		case /^teachadd/.test(data):
-
-			
-			//get user_template from database
-                        sql_query = mysql.format("select template from linebot where id = ?;", userid);
-                        query(sql_query, function(err, results){
-                                if (err) {
-                                        console.log("Encountered an error:", err.message);
-                                }
-					
 				
-				//reply user template
-				
-				var res = JSON.parse(results[0].template);
-				
-				event.reply(["直接輸入想記錄的就可以囉!" , "你現在的ToDoList：", res])
-                        });
-
-			
+			event.reply(["直接輸入想記錄的就可以囉!"]);
 			break;
 		
 		case /^show/.test(data):
 			
 			//get user_template from database
-			sql_query = mysql.format("select template from linebot where id = ?;", [userid]);
+			sql_query = `select thingstodo from user_data where dataid = '${userid}';`;
 			query(sql_query, function(err, results){
 				if (err) {
 					console.log("Encountered an error:", err.message);	
 				}
 				
-				//reply user template
-				var res = JSON.parse(results[0].template);
-				
+				var things = results[0].thingstodo;
+				var res = inserttemplate(things);
+					
 				event.reply(["你現在的ToDoList：" , res])
 			});
 			break;
@@ -146,13 +139,16 @@ bot.on('postback', function(event){
 		//teach delte and show deltemplate
 		case /^del/.test(data):
 			
-			sql_query = mysql.format("select deltemplate from linebot where id = ?;", [userid]);
+			sql_query = `select thingstodo from user_data  where dataid = '${userid}'; `;
+		
                         query(sql_query, function(err, results){
                                 if (err) {
                                         console.log("Encountered an error:", err.message);
                                 }
-                                var res = JSON.parse(results[0].deltemplate);
 				
+                                var things = results[0].thingstodo;
+				var res = insertdeltemplate(things);
+
 				event.reply(res);
 
 			});
@@ -168,102 +164,51 @@ bot.on('postback', function(event){
 			
 			
 			//delete item from database;
-			//get deltemplate from database
-			sql_query = mysql.format("select template,deltemplate,count from linebot where id = ?;", [userid]);
+			
+			sql_query = `select thingstodo,count from user_data where dataid = '${userid}';`;
 
 			query(sql_query, function(err, results){
                         	if (err) {
                                 	console.log("Encountered an error:", err.message);
                         	}
-
-				var res = JSON.parse(results[0].template);
-				var delres = JSON.parse(results[0].deltemplate);
-				var tmp_count = results[0].count;	
 				
-				//let's recorded list become one array
-				record_list = [];
-				var mainstruct = res.contents.body.contents[1].contents;
-				mainstruct.forEach(function(value, index){
-					
-					record_list.push(value.contents[1].text);
-					
-				});
-				
+				var things_array = [];
+				things_array = results[0].thingstodo.split(',');
+				things_array.shift();
 
 				//remove certain item using index;
-				var index = record_list.indexOf(remove_thing);
+				var index = things_array.indexOf(remove_thing);
 				
-				res = JSON.stringify(bacbactemplate);
-				res = JSON.parse(res);
-				
-				delres = JSON.stringify(del_template);
-				delres = JSON.parse(delres);
 
 				if (index !== -1) {
- 					 record_list.splice(index, 1);
+ 					 things_array.splice(index, 1);
 				}else{
 					event.reply("沒有找到你想刪除的!");
 				}
 					
 				//push to new usertemplate
 				
-				if(record_list.length == 0){
-					
-					//empty user templare
-					res = JSON.stringify(bacbactemplate);
-					res = JSON.parse(res);
-					
-					//empty del template
-					delres = JSON.stringify(del_template);
-					delres = JSON.parse(delres);
-					
-					event.reply(["哇，你完成所有事情了!",res]);
-					
+				if(things_array.length == 0){
+						
+					event.reply(["哇，你完成所有事情了!"]);
 
 				}else{
-					tmp_count = 0;
-					console.log(record_list)
-					record_list.forEach(function(value,i){
-						
-						
-						//caclute how many things be recorded
-						tmp_count += 1;
-						
-						//user_template
-                                        	action_template.contents[1].text = value;
-						
-						//magic bug?????????????????????????????????????
-                                        	res.contents.body.contents[1].contents.push(action_template);
-						console.log(res.contents.body.contents[1].contents[i]);
-
-						//del_template
-
-						/*var outter_index = parseInt(tmp_count / 3);
-						
-						push_template.action.data = `action=del&itemid=${value}`;
-						push_template.action.label = value;
-						
-						if(tmp_count % 3 == 1 && tmp_count > 3){
-							
-							//push outter template
-							delres.contents.contents.push(newcarousel);
-
-						}
-						if(tmp_count % 3 == 0){
-							outter_index -= 1;
-						}
-                          			
-						//push single inner template
-						delres.contents.contents[outter_index].body.contents.push(push_template);*/
-
+					var count = results[0].count;
+					count -= 1;
+					
+					var things = "";
+					things_array.forEach(function(value){
+						things += ","; 
+						things = things + value;
 					})
+					console.log(things);
+
+					updatedb(userid, things, count);
+					var user_template = inserttemplate(things_array);
+					event.reply([user_template]);
 
 				}
-				console.log(res.contents.body.contents[1].contents[1])
-				event.reply(res);
 
-				//update db data;
-				update(res, delres, userid, tmp_count);
 
                 	});
 
@@ -284,77 +229,48 @@ bot.on('message', function(event){
 	
 	//add user any  input to template
 	var input = event.message.text;
-	var userid = event.source.userId;	
-
-	//input data to action_template and del_template
-	action_template.contents[1].text = input;
-
-	//input data to del template
-	push_template.action.data = `action=del&itemid=${input}`;
-	push_template.action.label = input;
-
-	//insert action_template to database;
-	//get user_template from database;
-	sql_query = mysql.format("select template, deltemplate, count from linebot where id = ?;", [userid]);
-        query(sql_query, function(err, results){
-        	if (err) {
-                	console.log("Encountered an error:", err.message);
+	var userId = event.source.userId;	
+	
+	//get thingstodo from db
+	var sql_query = `select thingstodo, count from user_data where dataid = '${userId}';`;
+	var things, count;
+	
+	query(sql_query, function(err, results){
+                if (err) {
+                        console.log("Encountered an error:", err.message);
                 }
 		
-		//record how many things user append;	
-		//recording 9 things is max;	
-
-		var tmp_count = results[0].count;
-		var res = JSON.parse(results[0].template);
-		var delres = JSON.parse(results[0].deltemplate);
-
-		if (tmp_count > 8){
-
-			//bigger than 8 , do nothing and return!
-			event.reply(["你記下太多事了( > 9 )！先完成或刪除一些吧！", res]);
+		things = results[0].thingstodo;
+		count = results[0].count;
+		
+		//check if count > 8
+		if(count > 8){
+			event.reply(["你記下太多事了( > 9 )！先完成或刪除一些吧！"]);
 			return;
 
 		}
+		count += 1;
 
-		tmp_count += 1;
-
-                //insert action_template to user_template;
-		res.contents.body.contents[1].contents.push(action_template)
-
-		//if count > 3, del block need append new columns in template
-		var blockcount = parseInt(tmp_count / 3);
-	
-		if (tmp_count % 3 == 1 && tmp_count > 3){
-			
-			
-			delres.contents.contents.push(newcarousel);
-				
-		}
-		if(tmp_count % 3 == 0){
-			blockcount = blockcount - 1;
-		}
-			
-		delres.contents.contents[blockcount].body.contents.push(push_template);
+		//concat things
+		things = things + "," + input;
 		
-		
+		updatedb(userId, things, count);
+		var user_template = inserttemplate(things);
+		var del_template = insertdeltemplate(things);
 
-		event.reply(["你現在的ToDoList：" , res]);
-		
-		//update database 
-		update(res, delres, userid, tmp_count);
+		event.reply([user_template]);
         });
-	
 
+	
+	
 })
 
 
-function update(data, delres, userid, tmp_count){
+function updatedb(userid, things, count){
+	
 
-	var temp_template = JSON.stringify(data);
-        var deltemp_template = JSON.stringify(delres);
-
-
-        var sql_query = `update linebot set template = '${temp_template}', deltemplate = '${deltemp_template}', count = '${tmp_count}' where id = '${userid}';`;
+        var sql_query = `update user_data set thingstodo = '${things}', count = ${count} where dataid = '${userid}';`;
+	
 
         query(sql_query, function(err, results){
         	if (err) {
@@ -363,3 +279,81 @@ function update(data, delres, userid, tmp_count){
 
 	});
 }
+
+function inserttemplate(things){
+	
+	var things_array = things.slice(0);
+
+	if(typeof things == "string"){
+
+		things_array = "";
+		things_array = things.split(',');
+		things_array.shift();
+
+	}
+	
+	
+
+	//input thing to template
+	var main_template = JSON.stringify(bacbactemplate);
+	main_template = JSON.parse(main_template);
+
+	things_array.forEach(function(value){
+		
+		var tmp_template = JSON.stringify(action_template);
+                tmp_template = JSON.parse(tmp_template);
+
+		tmp_template.contents[1].text = value;
+		
+		main_template.contents.body.contents[1].contents.push(tmp_template);
+	
+	});
+
+	return(main_template);
+	
+}
+
+function insertdeltemplate(things){
+
+	var count = 0;
+
+	var things_array = things.slice(0);
+
+        if(typeof things == "string"){
+
+                things_array = "";
+                things_array = things.split(',');
+                things_array.shift();
+
+        }
+	var main_template = JSON.stringify(del_template);
+	main_template = JSON.parse(main_template);
+	
+	things_array.forEach(function(value, i){
+	
+		count += 1;
+		
+		var inner_template = JSON.stringify(push_template);
+		inner_template = JSON.parse(inner_template);
+		
+		inner_template.action.data = `action=del&itemid=${value}`;
+		inner_template.action.label = value;
+        	var blockcount = parseInt(count / 3);
+
+        	if(count % 3 == 1 && count > 3){
+                	main_template.contents.contents.push(newcarousel);
+        	}
+
+        	if(count % 3 == 0){
+                	blockcount -= 1;
+        	}
+
+		main_template.contents.contents[blockcount].body.contents.push(inner_template);
+
+
+	});
+
+	return(main_template);
+
+}
+
