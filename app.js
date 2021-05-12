@@ -5,6 +5,9 @@ const linebot = require('linebot');
 const Express = require('express');
 const BodyParser = require('body-parser');
 
+//store user image
+var fs = require('fs');
+
 //import sql connect function and config file
 const query = require('./sql_conn');
 const mysql = require("mysql");
@@ -46,6 +49,10 @@ app.post('/linewebhook', linebotParser);
 app.use(BodyParser.urlencoded({ extended: true }));
 app.use(BodyParser.json());
 
+//handle user image
+var ngrok_url = process.env.NGROK_URL;
+
+app.use(Express.static("upload"));
 app.listen(3000);
 
 
@@ -113,6 +120,8 @@ bot.on("unfollow", function(event){
 bot.on('postback', function(event){
 	var data = event.postback.data
 	var userid = event.source.userId;
+	var user_image_url = ngrok_url;
+	
 
 	switch (true){
 		case /^teachadd/.test(data):
@@ -130,8 +139,8 @@ bot.on('postback', function(event){
 				}
 				
 				var things = results[0].thingstodo;
-				var res = inserttemplate(things);
-					
+				var res = inserttemplate(things,user_image_url);
+				
 				event.reply(["你現在的ToDoList：" , res])
 			});
 			break;
@@ -147,7 +156,7 @@ bot.on('postback', function(event){
                                 }
 				
                                 var things = results[0].thingstodo;
-				var res = insertdeltemplate(things);
+				var res = insertdeltemplate(things,user_image_url);
 
 				event.reply(res);
 
@@ -161,8 +170,7 @@ bot.on('postback', function(event){
 			
 			//split item value
 			var remove_thing = data.split("=")[2];
-			
-			
+				
 			//delete item from database;
 			
 			sql_query = `select thingstodo,count from user_data where dataid = '${userid}';`;
@@ -181,7 +189,7 @@ bot.on('postback', function(event){
 				
 
 				if (index !== -1) {
- 					 things_array.splice(index, 1);
+ 					things_array.splice(index, 1);
 				}else{
 					event.reply("沒有找到你想刪除的!");
 				}
@@ -190,7 +198,10 @@ bot.on('postback', function(event){
 				
 				if(things_array.length == 0){
 						
-					event.reply(["哇，你完成所有事情了!"]);
+					event.reply(["哇，你完成所有事情了!"],);
+					var things = "";
+					count = 0;
+					updatedb(userid, things, count);
 
 				}else{
 					var count = results[0].count;
@@ -201,10 +212,10 @@ bot.on('postback', function(event){
 						things += ","; 
 						things = things + value;
 					})
-					console.log(things);
 
 					updatedb(userid, things, count);
-					var user_template = inserttemplate(things_array);
+					var user_template = inserttemplate(things_array, user_image_url);
+					
 					event.reply([user_template]);
 
 				}
@@ -227,9 +238,30 @@ bot.on('postback', function(event){
 //user input message will be added to list
 bot.on('message', function(event){
 	
+	var userId = event.source.userId;
+	var user_image_url = ngrok_url;	
+	//if user send image
+	
+	if(event.message.type == 'image'){
+
+		event.message.content().then(function(content){
+			var base64Data = content.toString('base64');
+			fs.writeFile(`./upload/${userId}.jpg`, base64Data, 'base64', function(err){
+				console.log(err);
+			});
+		});
+		
+		var url_array = ngrok_url.split("/");
+		var domain = url_array[2];
+		
+		user_image_url = `https://${domain}/${userId}.jpg`;
+		ngrok_url = user_image_url;
+	}
+	
+
 	//add user any  input to template
 	var input = event.message.text;
-	var userId = event.source.userId;	
+		
 	
 	//get thingstodo from db
 	var sql_query = `select thingstodo, count from user_data where dataid = '${userId}';`;
@@ -249,14 +281,15 @@ bot.on('message', function(event){
 			return;
 
 		}
-		count += 1;
-
-		//concat things
-		things = things + "," + input;
+		if(event.message.type != "image"){
+			count += 1;
+			things = things + "," + input;
+		}
+		
 		
 		updatedb(userId, things, count);
-		var user_template = inserttemplate(things);
-		var del_template = insertdeltemplate(things);
+		var user_template = inserttemplate(things, user_image_url);
+		var del_template = insertdeltemplate(things, user_image_url);
 
 		event.reply([user_template]);
         });
@@ -280,7 +313,7 @@ function updatedb(userid, things, count){
 	});
 }
 
-function inserttemplate(things){
+function inserttemplate(things,user_image_url){
 	
 	var things_array = things.slice(0);
 
@@ -293,10 +326,13 @@ function inserttemplate(things){
 	}
 	
 	
-
 	//input thing to template
 	var main_template = JSON.stringify(bacbactemplate);
 	main_template = JSON.parse(main_template);
+
+
+	//insert image
+	main_template.contents.hero.url = user_image_url;
 
 	things_array.forEach(function(value){
 		
@@ -313,7 +349,7 @@ function inserttemplate(things){
 	
 }
 
-function insertdeltemplate(things){
+function insertdeltemplate(things, user_image_url){
 
 	var count = 0;
 
@@ -328,6 +364,8 @@ function insertdeltemplate(things){
         }
 	var main_template = JSON.stringify(del_template);
 	main_template = JSON.parse(main_template);
+
+	main_template.contents.contents[0].hero.url = user_image_url;
 	
 	things_array.forEach(function(value, i){
 	
@@ -338,7 +376,11 @@ function insertdeltemplate(things){
 		
 		inner_template.action.data = `action=del&itemid=${value}`;
 		inner_template.action.label = value;
-        	var blockcount = parseInt(count / 3);
+        	
+		newcarousel.hero.url = user_image_url;
+
+		var blockcount = parseInt(count / 3);
+
 
         	if(count % 3 == 1 && count > 3){
                 	main_template.contents.contents.push(newcarousel);
