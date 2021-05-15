@@ -71,26 +71,32 @@ function insertdeltemplate(things, user_image_url){
         }
         var main_template = JSON.stringify(del_template);
         main_template = JSON.parse(main_template);
-
         main_template.contents.contents[0].hero.url = user_image_url;
-
+	
         things_array.forEach(function(value, i){
 
                 count += 1;
-
                 var inner_template = JSON.stringify(push_template);
                 inner_template = JSON.parse(inner_template);
 
                 inner_template.action.data = `action=del&itemid=${value}`;
                 inner_template.action.label = value;
-        
-                newcarousel.hero.url = user_image_url;
+       		 
 
                 var blockcount = parseInt(count / 3);
 
 
                 if(count % 3 == 1 && count > 3){
-                        main_template.contents.contents.push(newcarousel);
+
+			var outter_template = JSON.stringify(newcarousel);
+			console.log(outter_template);
+			outter_template = JSON.parse(outter_template);
+			
+			outter_template.hero.url = user_image_url;
+			
+                        main_template.contents.contents.push(outter_template);
+			
+			
                 }
 
                 if(count % 3 == 0){
@@ -98,10 +104,10 @@ function insertdeltemplate(things, user_image_url){
                 }
 
                 main_template.contents.contents[blockcount].body.contents.push(inner_template);
-
+		
 
         });
-
+	//console.log(main_template.contents.contents[0]);
         return(main_template);
 
 }

@@ -296,7 +296,7 @@ bot.on('message', function(event){
 		
 		updatedb(userId, things, count);
 		var user_template = func_template.inserttemplate(things, user_image_url);
-		var del_template = func_template.insertdeltemplate(things, user_image_url);
+		//var del_template = func_template.insertdeltemplate(things, user_image_url);
 
 		event.reply([user_template]);
         });
