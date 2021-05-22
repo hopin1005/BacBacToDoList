@@ -89,7 +89,6 @@ function insertdeltemplate(things, user_image_url){
                 if(count % 3 == 1 && count > 3){
 
 			var outter_template = JSON.stringify(newcarousel);
-			console.log(outter_template);
 			outter_template = JSON.parse(outter_template);
 			
 			outter_template.hero.url = user_image_url;
@@ -107,7 +106,6 @@ function insertdeltemplate(things, user_image_url){
 		
 
         });
-	//console.log(main_template.contents.contents[0]);
         return(main_template);
 
 }
