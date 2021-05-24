@@ -37,7 +37,7 @@ var linebot_setup = require('./bot_config');
 const bot = linebot_setup();
 const linebotParser = bot.parser();
 
-
+const message_func = require('./about_db/user_message');
 
 //handle user image
 var ngrok_url = process.env.NGROK_URL;
@@ -61,9 +61,8 @@ bot.on("unfollow", function(event){
 	
 	var userid = event.source.userId;
 	const del_func = require('./about_db/user_unfollow');
-	console.log(del_func);
-	del_func(userid);
 
+	del_func(userid);
 
 })
 
@@ -75,117 +74,51 @@ bot.on("unfollow", function(event){
 //4. delete main function
 bot.on('postback', function(event){
 	var data = event.postback.data
-	var userid = event.source.userId;
-	var user_image_url = ngrok_url;
+	var userId = event.source.userId;
 	
-
 	switch (true){
 		case /^teachadd/.test(data):
-				
-			event.reply(["直接輸入想記錄的就可以囉!"]);
-			break;
-		
-		case /^show/.test(data):
-			
-			//get user_template from database
-			sql_query = `select thingstodo from user_data where dataid = '${userid}';`;
-			query(sql_query, function(err, results){
-				if (err) {
-					console.log("Encountered an error:", err.message);	
-				}
-				
-				var things = results[0].thingstodo;
-				var res = func_template.inserttemplate(things,user_image_url);
-				
-				event.reply(["你現在的ToDoList：" , res])
-			});
+			event.reply("直接輸入想記錄的就可以囉");
 			break;
 
-		//teach delte and show deltemplate
+		case /^show/.test(data):
+
+			var datas = message_func.getthings(userId);
+        		var image_name = message_func.getimage(userId);
+
+			setTimeout(() => {
+				getdata(datas, image_name , event)
+			}, 500)
+			break;
+		
 		case /^del/.test(data):
 			
-			sql_query = `select thingstodo from user_data  where dataid = '${userid}'; `;
-		
-                        query(sql_query, function(err, results){
-                                if (err) {
-                                        console.log("Encountered an error:", err.message);
-                                }
-				
-                                var things = results[0].thingstodo;
-				var res = func_template.insertdeltemplate(things,user_image_url);
-
-				event.reply(res);
-
-			});
-		
-			
+			//get user things from db;
+			setTimeout(() => {
+                		var infos_promise = message_func.getimage(userId);
+                		var datas = message_func.getthings(userId);
+                		deldata(datas, infos_promise, event);
+        		}, 500)
 			break;
-
 
 		case /^action=del/.test(data):
 			
 			//split item value
-			var remove_thing = data.split("=")[2];
-				
-			//delete item from database;
+                        var remove_thing = data.split("=")[2];
 			
-			sql_query = `select thingstodo,count from user_data where dataid = '${userid}';`;
-
-			query(sql_query, function(err, results){
-                        	if (err) {
-                                	console.log("Encountered an error:", err.message);
-                        	}
-				
-				var things_array = [];
-				things_array = results[0].thingstodo.split(',');
-				things_array.shift();
-
-				//remove certain item using index;
-				var index = things_array.indexOf(remove_thing);
-				
-
-				if (index !== -1) {
- 					things_array.splice(index, 1);
-				}else{
-					event.reply("沒有找到你想刪除的!");
-				}
-					
-				//push to new usertemplate
-				
-				if(things_array.length == 0){
-						
-					event.reply(["哇，你完成所有事情了!"],);
-					var things = "";
-					count = 0;
-					updatedb(userid, things, count);
-
-				}else{
-					var count = results[0].count;
-					count -= 1;
-					
-					var things = "";
-					things_array.forEach(function(value){
-						things += ","; 
-						things = things + value;
-					})
-
-					updatedb(userid, things, count);
-					var user_template = func_template.inserttemplate(things_array, user_image_url);
-					
-					event.reply([user_template]);
-
-				}
-
-
-                	});
-
-			
+			var del_func = require('./about_db/user_del');
+			del_func.deldata(userId, remove_thing);
+			setTimeout(() => {
+                                var infos_promise = message_func.getimage(userId);
+                                var datas = message_func.getthings(userId);
+                                getdata(datas, infos_promise, event);
+                        }, 500)
+                        
 			break;
-			
+
 		default:
-			//do nothing;
-			event.reply("Ohhhhh, you may do wrong!");
-			return;
+			event.reply("you may be wrong");
+
 	}
 	
 })
@@ -196,8 +129,7 @@ bot.on('message', function(event){
 	
 	var userId = event.source.userId;
 	var image_name = ngrok_url;	
-	//if user send image
-	const message_func = require('./about_db/user_message');
+	
 	
 	if(event.message.type == 'image'){
 
@@ -221,25 +153,44 @@ bot.on('message', function(event){
 
 	//add user any  input to template
 	var thingstodo = event.message.text;
+
+	var infos_promise = message_func.getimage(userId);
+	var count;
+
+	infos_promise.then(data => {
+		data = JSON.parse(data)
+		count = parseInt(data[0].count)
+
+		if(thingstodo != null){
+			count += 1;
+			message_func.message(userId, thingstodo, count);
+		}
+	})
+
 	
-	if(thingstodo != null){
-		message_func.message(userId, thingstodo);	
-	}
-	
-	//use callback
-	setTimeout(getdata, 500)
-	
-	var datas;
-	function getdata(){
-		datas = message_func.getthings(userId);
-		image_name = message_func.getimage(userId);
 		
-		setTimeout(() => {
-			//waiting datas recv datas
-			func_template.inserttemplate(datas, image_name, event);
-		}, 500);
-	}
+	//use callback
+	setTimeout(() => {
+		infos_promise = message_func.getimage(userId);
+		var datas = message_func.getthings(userId);
+		getdata(datas, infos_promise, event);
+	}, 500)
 
 })
+
+
+function getdata(datas, infos_promise, event){
+        setTimeout(() => {
+        	//waiting datas recv datas
+                func_template.inserttemplate(datas, infos_promise, event);
+        }, 500);
+}
+
+function deldata(datas, infos_promise, event){
+        setTimeout(() => {
+                //waiting datas recv datas
+                func_template.insertdeltemplate(datas, infos_promise, event);
+        }, 500);
+}
 
 module.exports = linebotParser;

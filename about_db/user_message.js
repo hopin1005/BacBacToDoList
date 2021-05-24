@@ -44,19 +44,27 @@ function image(uid, image_name){
 }
 
 
-function message(uid, thing){
+function message(uid, thing, count){
 
 	user_data.create({
 		userid: uid,
 		thingstodo: thing,
 	});
+
+	user_info.update({
+		count: count
+	},{
+		where:{
+			userid: uid
+		}
+	})
 }
 
 
 async function getimage(uid){
 	var image_promise = await user_info.findAll({
 		raw: true,
-		attributes: ['image_name'],
+		attributes: ['image_name', 'count'],
 		where:{
 			userid: uid
 		}
