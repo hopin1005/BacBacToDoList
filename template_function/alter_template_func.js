@@ -17,12 +17,46 @@ del_template = deltemplate['deltemplate'];
 push_template = deltemplate['pushtemplate'];
 newcarousel = deltemplate['newcarousel'];
 
+require('dotenv').config({ path: '../.env'});
 
 
+function inserttemplate(things,image, event){
+	
+	
+        things.then(data => {
+		
+		//data's structure  [{"thingstodo":"123"},{"thingstodo":"456"}]
+		var things_array = JSON.parse(data)
+		
 
-function inserttemplate(things,user_image_url){
+		//input thing to template
+        	var main_template = JSON.stringify(bacbactemplate);
+        	main_template = JSON.parse(main_template);
+		
+		//insert image
+		image.then(data => {
+			var image_name = JSON.parse(data);
+			
+			image_name = image_name[0].image_name
 
-        var things_array = things.slice(0);
+        		main_template.contents.hero.url = `${process.env.NGROK_URL}${image_name}.jpg`;
+		
+		
+			//extract things
+			for(var i = 0; i < things_array.length; i++){
+				var tmp_template = JSON.stringify(action_template);
+                		tmp_template = JSON.parse(tmp_template);
+
+                		tmp_template.contents[1].text = things_array[i].thingstodo;
+
+                		main_template.contents.body.contents[1].contents.push(tmp_template);
+			}
+			console.log(main_template.contents.body.contents[1])	
+			event.reply(main_template);
+		})
+
+	})
+	/*var things_array = things.slice(0);
 
         if(typeof things == "string"){
 
@@ -52,14 +86,16 @@ function inserttemplate(things,user_image_url){
 
         });
 
-        return(main_template);
+        return(main_template);*/
 
 }
 
-function insertdeltemplate(things, user_image_url){
+function insertdeltemplate(things){
+	
+	//console.log(things);
 
         var count = 0;
-
+	
         var things_array = things.slice(0);
 
         if(typeof things == "string"){

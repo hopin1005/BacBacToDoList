@@ -45,33 +45,12 @@ var ngrok_url = process.env.NGROK_URL;
 
 //when user follow
 bot.on('follow', function(event){
-	
 
 	var userId = event.source.userId;
+	const create_func = require('./about_db/user_follow');
 
-	//input empty things and count to database
-	var count = 0;
-
-	sql_query = `insert into user_info (userid) values ('${userId}');`;
-
-	query(sql_query, function(err, results){
-
-        	if (err) {
-                	console.log('Encountered an error:', err.message);
-        	}
-
-	});
-
-	sql_query = `insert into user_data (dataid, thingstodo, count) values ('${userId}', '', '${count}');`;
-	query(sql_query, function(err, results){
-
-		if(err){
-			console.log('Encountered an error:' ,err.message);
-		}
-	
-  		event.reply(["歡迎來到BacBacToDoList! 按下方按鈕開始吧! 還能上傳圖片置換上面!","如果程式怪怪的，先封鎖在追蹤就可以清除todolist囉!",empty_template]);
-	});
-
+	create_func(userId);
+	event.reply(["歡迎來到BacBacToDoList! 按下方按鈕開始吧! 還能上傳圖片置換上面!","如果程式怪怪的，先封鎖在追蹤就可以清除todolist囉!",empty_template]);
 
 });
 
@@ -80,21 +59,11 @@ bot.on('follow', function(event){
 //delete user data
 bot.on("unfollow", function(event){
 	
-	sql_query = `delete from user_data where dataid = '${event.source.userId}';`;
+	var userid = event.source.userId;
+	const del_func = require('./about_db/user_unfollow');
+	console.log(del_func);
+	del_func(userid);
 
-	query(sql_query, function(err, results){
-		if(err) {
-			console.log('Encountered an error:', err.message);
-		}
-	});
-
-
-	sql_query = `delete from user_info where userid = "${event.source.userId}";`;
-	query(sql_query, function(err, results){
-                if (err) {
-                        console.log('Encountered an error:', err.message);
-                }
-        });	
 
 })
 
@@ -226,63 +195,51 @@ bot.on('postback', function(event){
 bot.on('message', function(event){
 	
 	var userId = event.source.userId;
-	var user_image_url = ngrok_url;	
+	var image_name = ngrok_url;	
 	//if user send image
+	const message_func = require('./about_db/user_message');
 	
 	if(event.message.type == 'image'){
 
 		event.message.content().then(function(content){
+			
+			//image name
+			const {uuid} = require('uuidv4');
+			image_name = uuid();
+
 			var base64Data = content.toString('base64');
-			fs.writeFile(`./upload/${userId}.jpg`, base64Data, 'base64', function(err){
+			fs.writeFile(`./upload/${image_name}.jpg`, base64Data, 'base64', function(err){
 				console.log(err);
 			});
+
+			//update image_name to db;
+			message_func.image(userId, image_name)
 		});
-		
-		var url_array = ngrok_url.split("/");
-		var domain = url_array[2];
-		
-		user_image_url = `https://${domain}/${userId}.jpg`;
-		ngrok_url = user_image_url;
 	}
+	
 	
 
 	//add user any  input to template
-	var input = event.message.text;
-		
+	var thingstodo = event.message.text;
 	
-	//get thingstodo from db
-	var sql_query = `select thingstodo, count from user_data where dataid = '${userId}';`;
-	var things, count;
+	if(thingstodo != null){
+		message_func.message(userId, thingstodo);	
+	}
 	
-	query(sql_query, function(err, results){
-                if (err) {
-                        console.log("Encountered an error:", err.message);
-                }
+	//use callback
+	setTimeout(getdata, 500)
+	
+	var datas;
+	function getdata(){
+		datas = message_func.getthings(userId);
+		image_name = message_func.getimage(userId);
 		
-		things = results[0].thingstodo;
-		count = results[0].count;
-		
-		//check if count > 8
-		if(count > 8){
-			event.reply(["你記下太多事了( > 9 )！先完成或刪除一些吧！"]);
-			return;
+		setTimeout(() => {
+			//waiting datas recv datas
+			func_template.inserttemplate(datas, image_name, event);
+		}, 500);
+	}
 
-		}
-		if(event.message.type != "image"){
-			count += 1;
-			things = things + "," + input;
-		}
-		
-		
-		updatedb(userId, things, count);
-		var user_template = func_template.inserttemplate(things, user_image_url);
-		//var del_template = func_template.insertdeltemplate(things, user_image_url);
-
-		event.reply([user_template]);
-        });
-
-	
-	
 })
 
 module.exports = linebotParser;

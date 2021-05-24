@@ -1,6 +1,6 @@
 function setup_linebot(){
 
-	const result = require('dotenv').config();
+	require('dotenv').config();
 	const linebot = require('linebot');
 
 	const bot = linebot({
