@@ -5,13 +5,13 @@ require('dotenv').config({ path: '../.env'});
 
 var user_info = sequelize.define('user_info', {
 
-        userid:{
+        id:{
 
-                type: Sequelize.STRING(100),
+                type: Sequelize.INTEGER,
                 primaryKey: true
 
         },
-
+	userid: Sequelize.STRING(100),
         image_name: Sequelize.STRING(100)
 
 },{
@@ -20,26 +20,33 @@ var user_info = sequelize.define('user_info', {
 
 var user_data = sequelize.define('user_datas', {
 
-	userid:{
-		type: Sequelize.STRING(100),
+	id:{
+		type: Sequelize.INTEGER,
 		primaryKey: true
 	},
+	userid: Sequelize.INTEGER,
 	thingstodo: Sequelize.STRING(100)
 
 },{
 	timestamps: false
 })
 
-user_data.belongsTo(user_info, {foreignKey: 'userid', foreignKeyContraints:false, constraints: false});
-user_info.hasMany(user_data, {foreignKey: 'userid', foreignKeyContraints:false, constraints: false})
 
 //create user info (uid, default_image_url)
-function del(uid){
+async function del(uid){
 
-
-	user_data.destroy({
+	var userid =await user_info.findAll({
+		raw: true,
+                attributes: ['id'],
                 where:{
                         userid: uid
+                }
+	})
+	
+	userid = userid[0].id
+	user_data.destroy({
+                where:{
+                        userid: userid
                 }
         });
 

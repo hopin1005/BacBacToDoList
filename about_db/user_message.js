@@ -7,10 +7,12 @@ require('dotenv').config({ path: '../.env'});
 
 var user_data = sequelize.define('user_datas', {
 
-	userid:{
+	id:{
                 type: Sequelize.STRING(100),
                 primaryKey: true
         },
+
+	userid: Sequelize.INTEGER,
         thingstodo: Sequelize.STRING(100)
 
 },{
@@ -19,16 +21,18 @@ var user_data = sequelize.define('user_datas', {
 
 var user_info = sequelize.define('user_infos', {
 
-	userid:{
-		type: Sequelize.STRING(100),
+	id:{
+		type: Sequelize.INTEGER,
 		primaryKey: true
 	},
+	userid: Sequelize.STRING(100),
 	image_name: Sequelize.STRING(100),
 	count: Sequelize.STRING(50)
 
 },{
 	timestamps: false
 })
+
 
 
 function image(uid, image_name){
@@ -44,10 +48,21 @@ function image(uid, image_name){
 }
 
 
-function message(uid, thing, count){
+async function message(uid, thing, count){
+	var primary_id = await user_info.findAll({
+
+		raw: true,
+		attributes: ['id'],
+		where:{
+			userid: uid
+		}
+	})	
+	
+	primary_id = primary_id[0].id
+	
 
 	user_data.create({
-		userid: uid,
+		userid: primary_id,
 		thingstodo: thing,
 	});
 
@@ -77,12 +92,22 @@ async function getimage(uid){
 
 async function getthings(uid){
 
-	
+	var primary_id = await user_info.findAll({
+
+                raw: true,
+                attributes: ['id'],
+                where:{
+                        userid: uid
+                }
+        })
+
+        primary_id = primary_id[0].id	
+
 	var data_promise = await user_data.findAll({
 		raw: true,
 		attributes: ['thingstodo'],
 		where:{
-			userid: uid
+			userid: primary_id
 		}
 	})
 

@@ -171,10 +171,10 @@ bot.on('message', function(event){
 		
 	//use callback
 	setTimeout(() => {
-		infos_promise = message_func.getimage(userId);
+		var infos_promise = message_func.getimage(userId);
 		var datas = message_func.getthings(userId);
 		getdata(datas, infos_promise, event);
-	}, 500)
+	},500)
 
 })
 
@@ -183,7 +183,7 @@ function getdata(datas, infos_promise, event){
         setTimeout(() => {
         	//waiting datas recv datas
                 func_template.inserttemplate(datas, infos_promise, event);
-        }, 500);
+        },500);
 }
 
 function deldata(datas, infos_promise, event){
